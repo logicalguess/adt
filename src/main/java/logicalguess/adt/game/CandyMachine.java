@@ -1,61 +1,19 @@
-package logicalguess.adt;
+package logicalguess.adt.game;
 
-import io.vavr.Tuple;
+import logicalguess.adt.domain.Input;
+import logicalguess.adt.domain.State;
 
-import java.io.IOException;
-import java.util.Objects;
 import java.util.Scanner;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import io.vavr.Tuple;
 import static io.vavr.API.*;
 import static io.vavr.Patterns.$Tuple2;
 
 public class CandyMachine {
-
-    enum Input {
-        Coin,
-        Turn,
-        Exit
-    }
-
-    static class State {
-        public final boolean locked;
-        public final int candies;
-        public final int coins;
-
-        public State(boolean locked, int candies, int coins) {
-            this.locked = locked;
-            this.candies = candies;
-            this.coins = coins;
-        }
-
-        @Override
-        public String toString() {
-            return "State{" +
-                    "locked=" + locked +
-                    ", candies=" + candies +
-                    ", coins=" + coins +
-                    '}';
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            State state = (State) o;
-            return locked == state.locked &&
-                    candies == state.candies &&
-                    coins == state.coins;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(locked, candies, coins);
-        }
-    }
 
     static BiFunction<Input, State, State> update = (input, state) ->
             Match(Tuple.of(input, state)).of(
@@ -83,7 +41,6 @@ public class CandyMachine {
                     Case($(), true)
             );
 
-
     static Supplier<Character> getInput = () -> {
         System.out.println("Please enter an input from: 'c', 't', or 'x'");
         Scanner scanner = new Scanner(System.in);
@@ -98,8 +55,7 @@ public class CandyMachine {
         if (loop) CandyMachine.processLoop.accept(update.apply(input, s));
     };
 
-    public static void main(String[] args) throws IOException {
-        State state = new State(true, 5, 10);
-        processLoop.accept(state);
+    public static void main(String[] args) {
+        processLoop.accept(new State(true, 5, 10));
     }
 }

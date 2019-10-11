@@ -1,5 +1,7 @@
 package logicalguess.adt.game;
 
+import io.vavr.Tuple2;
+import logicalguess.adt.domain.Event;
 import logicalguess.adt.domain.Input;
 import logicalguess.adt.domain.State;
 
@@ -10,20 +12,23 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.vavr.Tuple;
+import lombok.extern.slf4j.Slf4j;
+
 import static io.vavr.API.*;
 import static io.vavr.Patterns.$Tuple2;
 
+@Slf4j
 public class CandyMachine {
 
-    static BiFunction<Input, State, State> update = (input, state) ->
+    static BiFunction<Input, State, Tuple2<State, Event>> update = (input, state) ->
             Match(Tuple.of(input, state)).of(
-                    Case($Tuple2($(Input.Exit), $()), (in1, s1) -> s1),
-                    Case($Tuple2($(), $(s -> s.candies == 0)), (in1, s1) -> s1),
-                    Case($Tuple2($(Input.Coin), $(s -> s.locked == false)), (in1, s1) -> s1),
-                    Case($Tuple2($(Input.Turn), $(s -> s.locked == true)), (in1, s1) -> s1),
-                    Case($Tuple2($(Input.Coin), $(s -> s.locked == true)), (in1, s1) -> new State(false, s1.candies, s1.coins + 1)),
-                    Case($Tuple2($(Input.Turn), $(s -> s.locked == false)), (in1, s1) -> new State(true, s1.candies - 1, s1.coins)),
-                    Case($Tuple2($(), $()), (in1, s1) -> s1)
+                    Case($Tuple2($(Input.Exit), $()), (in1, s1) -> new Tuple2(s1, Event.Exited)),
+                    Case($Tuple2($(), $(s -> s.candies == 0)), (in1, s1) -> new Tuple2(s1, Event.InputIgnored)),
+                    Case($Tuple2($(Input.Coin), $(s -> s.locked == false)), (in1, s1) -> new Tuple2(s1, Event.InputIgnored)),
+                    Case($Tuple2($(Input.Turn), $(s -> s.locked == true)), (in1, s1) -> new Tuple2(s1, Event.InputIgnored)),
+                    Case($Tuple2($(Input.Coin), $(s -> s.locked == true)), (in1, s1) -> new Tuple2(new State(false, s1.candies, s1.coins + 1), Event.CoinReceived)),
+                    Case($Tuple2($(Input.Turn), $(s -> s.locked == false)), (in1, s1) -> new Tuple2(new State(true, s1.candies - 1, s1.coins), Event.CandyReleased)),
+                    Case($Tuple2($(), $()), (in1, s1) -> new Tuple2(s1, Event.InputIgnored))
 
             );
 
@@ -48,11 +53,14 @@ public class CandyMachine {
     };
 
     static Consumer<State> processLoop = s -> {
-        System.out.println(s);
+        log.debug(s.toString());
         char c = getInput.get();
         Input input = interpretInput.apply(Character.valueOf(c));
         boolean loop = evaluateInput.apply(input);
-        if (loop) CandyMachine.processLoop.accept(update.apply(input, s));
+        Tuple2<State, Event> output = update.apply(input, s);
+        log.info(output._2.toString());
+        if (loop)
+            CandyMachine.processLoop.accept(output._1);
     };
 
     public static void main(String[] args) {
